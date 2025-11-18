@@ -7,8 +7,9 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+ 
 import java.util.concurrent.Executor;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
@@ -19,7 +20,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
  */
 public abstract class BaseEventBus implements EventBus {
 
-    protected final Set<Subscription> subscriptions = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    protected final List<Subscription> subscriptions = new CopyOnWriteArrayList<>();
 
     protected final EventExceptionHandler exceptionHandler;
     protected final Executor executor;
@@ -132,7 +133,16 @@ public abstract class BaseEventBus implements EventBus {
             String name = String.format("%s.%s(%s)", cl.getName(), method.getName(), eventType.getSimpleName());
             EventListener<?> listener = createEventListener(listenerInstance, method);
 
-            subscriptions.add(new Subscription(listener, listenerInstance, name, eventType));
+            // Determine priority if the annotation is SubscribeEvent
+            EventPriority priority = EventPriority.NORMAL;
+            for (Class<? extends Annotation> ann : annotations) {
+                if (method.isAnnotationPresent(ann) && ann.equals(SubscribeEvent.class)) {
+                    SubscribeEvent se = method.getAnnotation(SubscribeEvent.class);
+                    priority = se.priority();
+                    break;
+                }
+            }
+            addSubscription(new Subscription(listener, listenerInstance, name, eventType, priority));
         }
         for (Field field : cl.getDeclaredFields()) {
             if (annotations.stream().noneMatch(field::isAnnotationPresent)) continue;
@@ -150,7 +160,15 @@ public abstract class BaseEventBus implements EventBus {
                 if (!field.isAccessible())
                     field.setAccessible(true);
                 EventListener<?> listener = (EventListener<?>) field.get(listenerInstance);
-                subscriptions.add(new Subscription(listener, listenerInstance, name, eventType));
+                EventPriority priority = EventPriority.NORMAL;
+                for (Class<? extends Annotation> ann : annotations) {
+                    if (field.isAnnotationPresent(ann) && ann.equals(SubscribeEvent.class)) {
+                        SubscribeEvent se = field.getAnnotation(SubscribeEvent.class);
+                        priority = se.priority();
+                        break;
+                    }
+                }
+                addSubscription(new Subscription(listener, listenerInstance, name, eventType, priority));
             } catch (ClassCastException e) {
                 throw new IllegalArgumentException("Could not evaluate event type from field " + field.getName() + " in "
                         + cl + ". Is it missing generics?");
@@ -161,7 +179,7 @@ public abstract class BaseEventBus implements EventBus {
     }
 
     @Override public <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener) {
-        subscriptions.add(new Subscription(listener, null, listener.getClass().getName(), eventType));
+        addSubscription(new Subscription(listener, null, listener.getClass().getName(), eventType, EventPriority.NORMAL));
     }
 
     @SuppressWarnings("rawtypes")
@@ -192,6 +210,28 @@ public abstract class BaseEventBus implements EventBus {
 
     @Override public EventExceptionHandler getEventExceptionHandler() {
         return exceptionHandler;
+    }
+
+    /**
+     * Inserts the subscription into the list taking priority into account.
+     */
+    protected void addSubscription(Subscription subscription) {
+        // MONITOR should always be last
+        if (subscription.getPriority() == EventPriority.MONITOR) {
+            subscriptions.add(subscription);
+            return;
+        }
+        int idx = 0;
+        for (Subscription s : subscriptions) {
+            if (s.getPriority() == EventPriority.MONITOR) {
+                break;
+            }
+            if (s.getPriority().ordinal() < subscription.getPriority().ordinal()) {
+                break;
+            }
+            idx++;
+        }
+        subscriptions.add(idx, subscription);
     }
 
     protected abstract <T> EventListener<T> createEventListener(@NotNull Object listenerInstnace, @NotNull Method method);

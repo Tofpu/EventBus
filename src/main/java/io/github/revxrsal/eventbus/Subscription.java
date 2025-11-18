@@ -13,12 +13,14 @@ public final class Subscription {
     private final Object instance;
     private final String name;
     private final Class<?> eventType;
+    private final EventPriority priority;
 
-    public Subscription(EventListener listener, Object instance, String name, Class<?> eventType) {
+    public Subscription(EventListener listener, Object instance, String name, Class<?> eventType, EventPriority priority) {
         this.listener = listener;
         this.instance = instance;
         this.name = name;
         this.eventType = eventType;
+        this.priority = priority;
     }
 
     /**
@@ -41,6 +43,15 @@ public final class Subscription {
      */
     public EventListener getListener() {
         return listener;
+    }
+
+    /**
+     * Returns the priority of this subscription.
+     *
+     * @return The event priority
+     */
+    public EventPriority getPriority() {
+        return priority;
     }
 
     /**
@@ -76,6 +87,6 @@ public final class Subscription {
     }
 
     @Override public String toString() {
-        return "Subscription(" + name + ")";
+        return "Subscription(" + name + ", priority=" + priority + ")";
     }
 }

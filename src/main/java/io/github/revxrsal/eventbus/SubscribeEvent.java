@@ -14,4 +14,8 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SubscribeEvent {
+	/**
+	 * The priority of the listener. Defaults to {@link EventPriority#NORMAL}.
+	 */
+	EventPriority priority() default EventPriority.NORMAL;
 }
