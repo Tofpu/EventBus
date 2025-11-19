@@ -168,13 +168,26 @@ public interface EventBus {
     void register(@NotNull Object listener);
 
     /**
+     * Registers the specified listener for the given event type with the default {@link EventPriority#NORMAL} priority
+     *
+     * @param eventType Event class to register for
+     * @param listener  Listener to register
+     * @param <T>       The event type
+     *
+     */
+    default <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener) {
+        registerListener(eventType, listener, EventPriority.NORMAL);
+    }
+
+    /**
      * Registers the specified listener for the given event type
      *
      * @param eventType Event class to register for
      * @param listener  Listener to register
      * @param <T>       The event type
+     * @param priority  The event priority
      */
-    <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener);
+    <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener, @NotNull EventPriority priority);
 
     /**
      * Registers the specified {@link EventListener}. This will try to evaluate

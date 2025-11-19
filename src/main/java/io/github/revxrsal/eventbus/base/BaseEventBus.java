@@ -178,8 +178,9 @@ public abstract class BaseEventBus implements EventBus {
         }
     }
 
-    @Override public <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener) {
-        addSubscription(new Subscription(listener, null, listener.getClass().getName(), eventType, EventPriority.NORMAL));
+    @Override
+    public <T> void registerListener(@NotNull Class<T> eventType, @NotNull EventListener<T> listener, @NotNull EventPriority priority) {
+        addSubscription(new Subscription(listener, null, listener.getClass().getName(), eventType, priority));
     }
 
     @SuppressWarnings("rawtypes")
