@@ -41,7 +41,8 @@ final class EventGenerator implements Opcodes {
             throw new IllegalArgumentException("Event class must be an interface!");
         }
         return FACTORIES.computeIfAbsent(eventType, eventClass -> {
-            String name = eventClass.getPackage().getName() + ".gen." + eventClass.getSimpleName();
+            String cleanEventClassPath = eventClass.getName().replace('.', '_');
+            String name = eventClass.getPackage().getName() + ".gen.Asm" + cleanEventClassPath;
             Type genType = Type.getType("L" + name.replace('.', '/') + ";");
             ClassWriter writer = GeneratorAdapter.newClassWriter(name, Type.getInternalName(eventClass));
             List<CtrType> constructorTypes = new ArrayList<>();
@@ -206,7 +207,7 @@ final class EventGenerator implements Opcodes {
             GeneratedClassDefiner.define(eventClass.getClassLoader(), name, generated);
 
             // generate a factory to invoke the object constructor
-            name = GeneratedEventFactory.class.getPackage().getName() + "_." + eventClass.getSimpleName() + "GeneratedEventFactory";
+            name = eventClass.getPackage().getName() + "_." + cleanEventClassPath + "GeneratedEventFactory";
             writer = GeneratorAdapter.newClassWriter(name, GEN_FACTORY);
             GeneratorAdapter.writeConstructor(writer);
             adapter = GeneratorAdapter.newMethodGenerator(writer, "newEvent", "([Ljava/lang/Object;)Ljava/lang/Object;");
