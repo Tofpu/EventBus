@@ -51,7 +51,7 @@ final class GeneratedClassDefiner {
         public boolean hasClass(final String name) {
             synchronized (getClassLoadingLock(name)) {
                 try {
-                    Class.forName(name);
+                    Class.forName(name, false, this);
                     return true;
                 } catch (ClassNotFoundException e) {
                     return false;
